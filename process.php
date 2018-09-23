@@ -1,27 +1,24 @@
 <?php
 /**
  * Created by PhpStorm.
- * User: tony
- * Date: 8/12/18
- * Time: 3:39 PM
+ * User: life0
+ * Date: 2018/9/15
+ * Time: 10:35
  */
-
 require_once "./config.php";
 $action = $_GET['action'];
-
-switch($action){
+switch ($action){
     case "query":
         query();
         break;
     case "insert":
         insert();
         break;
-    case "del_record":
-        delete();
+    case "update":
+        update();
+        break;
 }
-
-function query()
-{
+function query(){
     $con = mysqli_connect(DB_HOST, DB_USER, DB_PWD);
 //数据库是否连接成功，测试用
 //        if(!$con){
@@ -33,7 +30,7 @@ function query()
 //切换当前数据库
     mysqli_select_db($con, DB_NAME);
 //数据库语句定义
-    $sql = "SELECT * FROM clip_note";
+    $sql = "SELECT * FROM luck_money";
     $res = mysqli_query($con, $sql);
     $result_number_rows = mysqli_num_rows($res);
     if (!$result_number_rows) {
@@ -49,9 +46,9 @@ function query()
     }
     mysqli_close($con);
 }
-
 function insert(){
-    $content = $_POST['content'];
+    $type = $_POST['type'];
+    $url = $_POST['url'];
     $current_date = date("Y-m-d");
     $con = mysqli_connect(DB_HOST, DB_USER, DB_PWD);
 //数据库是否连接成功，测试用
@@ -64,19 +61,22 @@ function insert(){
 //切换当前数据库
     mysqli_select_db($con, DB_NAME);
 //数据库语句定义
-    $sql = "INSERT INTO clip_note VALUES(null, '".$current_date."','".$content."')";
+    $sql = "INSERT INTO luck_money VALUES(NULL, '". $current_date ."', '". $type ."', '". $url ."', '0')";
     mysqli_query($con, $sql);
     $res = mysqli_insert_id($con);
     if(!$res){
         echo "failed";
+//        echo mysqli_errno($con);
     }
     else{
         echo "success";
     }
+    mysqli_close($con);
 }
 
-function delete(){
-    $record_id = $_POST["record_id"];
+//更新使用状态
+function update(){
+    $id = $_POST['id'];
     $con = mysqli_connect(DB_HOST, DB_USER, DB_PWD);
 //数据库是否连接成功，测试用
 //        if(!$con){
@@ -88,13 +88,15 @@ function delete(){
 //切换当前数据库
     mysqli_select_db($con, DB_NAME);
 //数据库语句定义
-    $sql = "DELETE FROM clip_note WHERE record_id = ".$record_id;
+    $sql = "UPDATE luck_money SET link_used = 1 WHERE record_id = ". $id;
     mysqli_query($con, $sql);
-    $affected_rows = mysqli_affected_rows($con);
-    if($affected_rows){
-        echo "success";
+    $res = mysqli_affected_rows($con);
+    if(!$res){
+        echo "failed";
+//        echo mysqli_errno($con);
     }
     else{
-        echo "failed";
+        echo "success";
     }
+    mysqli_close($con);
 }

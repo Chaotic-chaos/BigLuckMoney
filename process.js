@@ -1,28 +1,38 @@
+//函数定义
+//显示历史数据
 function display(){
-    //进入后立即加载查询post
-    $.post("/process.php?action=query", {}, function(res){
-        //post回调
-        if(res == "No Records in database!"){
-            $("#cards_area").empty();
-            $("#cards_area").append("<h3>No Records in Database!</h3>");
+    $.post("./process.php?action=query", {}, function (res) {
+        //查询回调
+        if (res == "No Records in database!") {
+            $("#tbody").empty();
         }
-        var result = eval(res);
-        $("#cards_area").empty();
-        for(i=0; i<result.length; i++){
-            var display_card = '<!--这里是显示卡-->\n' +
-                '                <div class="container_card">\n' +
-                '                    <div class="card text-white bg-primary mb-3" id="display_card_"' + (i+1) + ' style="max-width: 20rem;">\n' +
-                '                        <div class="card-header">' + result[i].record_date + '<button type="submit" id="' + result[i].record_id + '" class="close del">&times;</button></div>\n' +
-                '                        <div class="card-body">\n' +
-                '                            <p class="card-text">' + result[i].record_content + '</p>\n' +
-                '                            <textarea class="card-text" id="text_' + (i+1) +'" style="position: absolute;top: 0;left: 0;opacity: 0;z-index: -10;">' + result[i].record_content + '</textarea>\n' +
-                '                            <button type="button" class="btn btn-outline-secondary writeclipboard" style="width: 48%">一键复制</button>\n' +
-                '                            <button type="button" class="btn btn-outline-secondary openlink" style="width: 49%">打开网址</button>\n' +
-                '                        </div>\n' +
-                '                    </div>\n' +
-                '                </div>\n' +
-                '                <!--显示卡结束在这里-->'
-            $("#cards_area").append(display_card);
+        else {
+            var result = eval(res);
+            $("#tbody").empty();
+            for (i = 0; i < result.length; i++) {
+                //循环输出表格
+                var table_row_alive = '<tr class="table-info" id="' + result[i].record_id + '">\n' +
+                    '                <th scope="row">' + result[i].record_date + '</th>\n' +
+                    '                <td>' + result[i].link_type + '</td>\n' +
+                    '                <td>' + result[i].link + '</td>\n' +
+                    '                <td><button type="button" class="btn btn-danger btn-sm used" id="' + result[i].record_id + '">已使用</button></td>\n' +
+                    '            </tr>';
+                var table_row_recal = '<tr class="table-active" id="' + result[i].record_id + '">\n' +
+                    '                <th scope="row">' + result[i].record_date + '</th>\n' +
+                    '                <td>' + result[i].link_type + '</td>\n' +
+                    '                <td>' + result[i].link + '</td>\n' +
+                    '                <td><button type="button" disabled="disabled" class="btn btn-danger btn-sm disabled used" id="' + result[i].record_id + '">已使用</button></td>\n' +
+                    '            </tr>';
+                //判断是否已经使用，输出不同的颜色
+                if(result[i].link_used == 1){
+                    //已使用，置灰
+                    $("#tbody").append(table_row_recal);
+                }
+                else{
+                    //未使用，置蓝
+                    $("#tbody").append(table_row_alive);
+                }
+            }
         }
     })
 }
@@ -32,83 +42,52 @@ function scrollToEnd(){//滚动到底部
     $(document).scrollTop(h);
 }
 
-function showCopySuccess(){
-    $("#dialog_area").empty();
-    var copy_success = '<div class="alert alert-dismissible alert-info">\n' +
-        '                        <button type="button" class="close" data-dismiss="alert">&times;</button>\n' +
-        '                        <h4 class="alert-heading">o(>﹏<)o搞定!</h4>\n' +
-        '                        <p class="mb-0">复制好了！快去粘贴！</p>\n' +
-        '                    </div>';
-    $("#dialog_area").append(copy_success);
-}
 
+
+//函数入口
 $(document).ready(
+    //进入加载查询函数
     display()
 )
 
-
-$("#submit").click(function(){
-    var content = $("#content").val();
-    if(content == ''){
-        $("#submit").text("请输入内容");
-        $("#submit").attr("class", "btn btn-warning btn-lg btn-block");
+$("#submit").click(//插入新的
+    function() {
+        //插入新数据
+        var type = $("input[name='customRadio']:checked").val();
+        var url = $("#url").val();
+        if(type == '' || url == ''){
+            $("#submit").text("请选择红包类型并输入网址");
+            $("#submit").attr("class", "btn btn-warning btn-lg btn-block");
+        }
+        else {
+            $.post("./process.php?action=insert", {type: type, url: url}, function (res) {
+                //post回调
+                if(res == "success"){
+                    $("#submit").text("搞定了！");
+                    $("#submit").attr("class", "btn btn-success btn-lg btn-block");
+                    $("#key_words").val("");
+                    $("#url").val("");
+                    display();
+                    scrollToEnd();
+                }
+                else{
+                    $("#submit").text("服务器挂了，快去检查");
+                    $("#submit").attr("class", "btn btn-danger btn-lg btn-block");
+                }
+            })
+        }
     }
-    else {
-        $.post("/process.php?action=insert", {content: content}, function (res) {
-            //post回调
-            if(res == "success"){
-                $("#submit").text("O(∩_∩)O嗯!");
-                $("#submit").attr("class", "btn btn-success btn-lg btn-block");
-                $("#content").val("");
-                display();
-                scrollToEnd();
-            }
-            else{
-                $("#submit").text("服务器再次崩溃");
-                $("#submit").attr("class", "btn btn-danger btn-lg btn-block");
-            }
-        })
-    }
-})
+)
 
-$("#cards_area").on("click", ".del", function(){
-    var record_id = $(this).attr("id");
-    $.post("/process.php?action=del_record", {record_id: record_id}, function(res){
-        //post回调
-        $("#dialog_area").empty();
-        var del_dialog_success = '<div class="alert alert-dismissible alert-success">\n' +
-            '                        <button type="button" class="close" data-dismiss="alert">&times;</button>\n' +
-            '                        <h4 class="alert-heading">o(>﹏<)o搞定!</h4>\n' +
-            '                        <p class="mb-0">删除成功，已经更新显示区</p>\n' +
-            '                    </div>';
-        var del_dialog_failed = '<div class="alert alert-dismissible alert-danger">\n' +
-            '                        <button type="button" class="close" data-dismiss="alert">&times;</button>\n' +
-            '                        <h4 class="alert-heading">(⊙o⊙)Opps!</h4>\n' +
-            '                        <p class="mb-0">删除失败，自己检查服务器吧</p>\n' +
-            '                    </div>';
+$("#tbody").on("click", ".used", function(){
+    var id = $(this).attr("id");
+    $.post("./process.php?action=update", {id: id}, function(res){
+        //更新回调
         if(res == "success"){
-            $("#dialog_area").append(del_dialog_success);
+            display();
         }
         else{
-            $("#dialog_area").append(del_dialog_success);
+            alert("服务器挂了，快去修！");
         }
-        display();
-        scrollToEnd();
     })
-})
-
-$("#cards_area").on("click", ".openlink", function(){
-    var link = $(this).prev().prev().text();
-    // var redirectWindow = window.open(link, '_blank');
-    // redirectWindow.location;
-    // window.open("www.baidu.com", "_blank").location;
-    window.location.href("www.baidu.com");
-})
-
-$("#cards_area").on("click", ".writeclipboard", function(){
-    var id = $(this).prev().attr("id");
-    var text = document.getElementById(id);
-    text.select();
-    document.execCommand("Copy");
-    showCopySuccess();
 })
